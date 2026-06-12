@@ -224,7 +224,6 @@ export function PlaygroundTerminal({files, version}: Props) {
 
         writeLines(term, [`${cyan}[browserpod]${reset} Booting pod...`]);
 
-        console.log(`Booting pod...`, apiKey);
         const pod = await BrowserPod.boot({apiKey});
 
         if (disposed || !term)
