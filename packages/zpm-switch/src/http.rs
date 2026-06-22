@@ -8,7 +8,7 @@ use crate::errors::Error;
 static HTTP_CLIENT: LazyLock<Result<Client, Error>> = LazyLock::new(|| {
     let mut builder = reqwest::Client::builder();
 
-    #[cfg(not(all(target_arch = "wasm64", target_vendor = "browserpod")))]
+    #[cfg(not(all(target_arch = "wasm32", target_vendor = "browserpod")))]
     {
         builder = builder.use_rustls_tls();
     }

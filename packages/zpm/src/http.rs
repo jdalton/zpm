@@ -5,7 +5,7 @@ use dashmap::DashMap;
 use hickory_resolver::{config::LookupIpStrategy, TokioResolver};
 use http::HeaderMap;
 use itertools::Itertools;
-#[cfg(not(all(target_arch = "wasm64", target_vendor = "browserpod")))]
+#[cfg(not(all(target_arch = "wasm32", target_vendor = "browserpod")))]
 use reqwest::Identity;
 use reqwest::{dns::{self, Addrs}, header::{HeaderName, HeaderValue}, Body, Certificate, Client, ClientBuilder, Method, Proxy, RequestBuilder, Response, Url};
 use tokio::sync::OnceCell;
@@ -282,7 +282,7 @@ impl HttpClient {
     fn build_client(config: &Configuration, network_settings: Option<&NetworkSettings>) -> Result<Client, Error> {
         let mut client_builder = reqwest::Client::builder();
 
-        #[cfg(not(all(target_arch = "wasm64", target_vendor = "browserpod")))]
+        #[cfg(not(all(target_arch = "wasm32", target_vendor = "browserpod")))]
         {
             client_builder = client_builder.use_rustls_tls();
         }
@@ -347,14 +347,14 @@ impl HttpClient {
 
         match (https_cert_file_path, https_key_file_path) {
             (Some(cert_path), Some(key_path)) => {
-                #[cfg(all(target_arch = "wasm64", target_vendor = "browserpod"))]
+                #[cfg(all(target_arch = "wasm32", target_vendor = "browserpod"))]
                 {
                     let _ = (cert_path, key_path);
 
                     return Err(Error::ConflictingOptions("httpsCertFilePath / httpsKeyFilePath (PEM client identity) require reqwest's rustls-tls feature, currently disabled for the browserpod target".to_string()));
                 }
 
-                #[cfg(not(all(target_arch = "wasm64", target_vendor = "browserpod")))]
+                #[cfg(not(all(target_arch = "wasm32", target_vendor = "browserpod")))]
                 {
                 let cert_content
                     = cert_path.fs_read_prealloc()?;

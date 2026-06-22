@@ -75,10 +75,10 @@ async-trait = "0.1.89"
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
 
-[target.'cfg(all(target_arch = "wasm64", target_vendor = "browserpod"))'.dependencies]
+[target.'cfg(all(target_arch = "wasm32", target_vendor = "browserpod"))'.dependencies]
 reqwest = { workspace = true, default-features = false, features = ["default-tls"] }
 
-[target.'cfg(not(all(target_arch = "wasm64", target_vendor = "browserpod")))'.dependencies]
+[target.'cfg(not(all(target_arch = "wasm32", target_vendor = "browserpod")))'.dependencies]
 reqwest = { workspace = true, default-features = false, features = ["rustls-tls"] }
 
 [build-dependencies]

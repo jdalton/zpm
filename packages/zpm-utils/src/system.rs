@@ -24,7 +24,7 @@ const ARCH: Cpu = Cpu::Aarch64;
 #[cfg(target_arch = "x86")]
 const ARCH: Cpu = Cpu::I386;
 
-#[cfg(target_arch = "wasm64")]
+#[cfg(target_arch = "wasm32")]
 const ARCH: Cpu = Cpu::Wasm64;
 
 #[cfg(target_os = "linux")]
