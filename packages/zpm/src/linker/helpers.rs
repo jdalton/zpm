@@ -1,5 +1,6 @@
 use std::{collections::{BTreeMap, BTreeSet}, fs::Permissions, os::unix::fs::PermissionsExt, vec};
 
+use decmpfs::Gate;
 use zpm_formats::iter_ext::IterExt;
 use zpm_parsers::JsonDocument;
 use zpm_primitives::{Descriptor, VersionFilter, Locator, Reference};
@@ -278,10 +279,56 @@ fn link_into_cas(target_path: &Path, data: &[u8], mode: u32, index_root: &Path) 
         // inherit the repair without losing inode identity.
         index_path.fs_write(data)?;
         index_path.fs_set_permissions(Permissions::from_mode(mode_bits))?;
+        if store_compression_gate().is_some_and(|gate| gate.matches(target_path.as_str(), data.len() as u64)) {
+            // Fail-soft: ignore errors; a failed compress leaves the plain file in place.
+            let _ = decmpfs::compress_file(index_path.to_path_buf().as_path());
+        }
         set_safe_mtime(&index_path)?;
     }
 
     ensure_hardlink(target_path, &index_path)
+}
+
+/// Resolve the process-global store-compression gate from `ZPM_COMPRESS_STORE`.
+///
+/// The env var being unset means compression is off (`None`). A set value is
+/// parsed once and cached: an affirmative or unrecognized value uses the fleet
+/// default gate (`**/*.node`, no size floor); `glob:`/`size:` directives build
+/// a targeted gate; a malformed size predicate fails closed (`None`).
+fn store_compression_gate() -> Option<&'static Gate> {
+    static GATE: std::sync::OnceLock<Option<Gate>> = std::sync::OnceLock::new();
+    GATE.get_or_init(|| {
+        std::env::var("ZPM_COMPRESS_STORE")
+            .ok()
+            .and_then(|v| parse_compress_store_gate(&v))
+    })
+    .as_ref()
+}
+
+/// Pure parse of a `ZPM_COMPRESS_STORE` value into a `Gate`. `None` means
+/// compression stays off. A bare/affirmative value (`""`, `"1"`, `"true"`,
+/// `"on"`, `"yes"`) or an unrecognized directive yields the fleet default
+/// gate; a `glob:`/`size:` spec builds a targeted gate; a malformed size
+/// predicate fails closed.
+fn parse_compress_store_gate(spec: &str) -> Option<Gate> {
+    let trimmed = spec.trim();
+    if trimmed.is_empty() || matches!(trimmed, "1" | "true" | "on" | "yes") {
+        return Some(Gate::default());
+    }
+    let mut glob: Option<&str> = None;
+    let mut size: Option<&str> = None;
+    for part in trimmed.split(';') {
+        let part = part.trim();
+        if let Some(rest) = part.strip_prefix("glob:") {
+            glob = Some(rest.trim());
+        } else if let Some(rest) = part.strip_prefix("size:") {
+            size = Some(rest.trim());
+        }
+    }
+    if glob.is_none() && size.is_none() {
+        return Some(Gate::default());
+    }
+    Gate::new(glob.or(Some(decmpfs::DEFAULT_GLOB)), size).ok()
 }
 
 fn set_safe_mtime(path: &Path) -> Result<(), Error> {
