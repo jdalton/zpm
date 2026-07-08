@@ -139,8 +139,47 @@ for (let t = 0; t <= axisMax; t += 50) {
   out.push(text(gx, axisY + 24, t === axisMax ? `${t} MiB` : String(t), { size: 14, fill: C.faint, anchor: t === axisMax ? 'end' : 'middle' }))
 }
 
+// ── write-cost callout (single measured figure, boxed) ───────────────────────
+// One-time install write cost, measured on darwin-arm64. These are the only
+// write numbers stated — no fabricated per-addon write bars.
+const coBoxY = axisY + 40
+const coBoxH = 108
+out.push(rect(PAD, coBoxY, W - PAD * 2, coBoxH, C.codeBg, 10))
+out.push(rect(PAD, coBoxY, 5, coBoxH, C.green, 2))
+out.push(text(PAD + 22, coBoxY + 30, 'Write cost — one-time, at install (darwin-arm64)', { size: 16, fill: C.ink, weight: 'bold' }))
+out.push(rich(
+  PAD + 22,
+  coBoxY + 58,
+  [
+    { t: 'decmpfs on APFS, 40 MB addon: ' },
+    { t: '42 ms', code: 1 },
+    { t: ' compressed vs ' },
+    { t: '21 ms', code: 1 },
+    { t: ' plain ' },
+    { t: 'cp', code: 1 },
+    { t: ' — about ' },
+    { t: '2×  ', b: 1 },
+    { t: 'a normal write.' },
+  ],
+  15.5,
+  C.muted,
+))
+out.push(rich(
+  PAD + 22,
+  coBoxY + 86,
+  [
+    { t: 'Parallel block compression is ' },
+    { t: '6.5× faster', b: 1 },
+    { t: ' than the naive ' },
+    { t: '275 ms', code: 1 },
+    { t: ' serial write.' },
+  ],
+  15.5,
+  C.muted,
+))
+
 // ── footer rule + explainer (this is the block that overflowed in v4) ─────────
-const ruleY = axisY + 44
+const ruleY = coBoxY + coBoxH + 34
 out.push(`<line x1="${PAD}" y1="${ruleY}" x2="${W - PAD}" y2="${ruleY}" stroke="${C.grid}" stroke-width="1"/>`)
 const foot = [
   [{ t: 'These six addons together: 221 → 90 MiB on disk (−59%).', b: 1 }, { t: ' The store links each entry into every project by reflink/hardlink, so it’s compressed once' }],
